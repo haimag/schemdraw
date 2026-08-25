@@ -158,7 +158,7 @@ class WaveL(Wave0):
             yhead = self.yhalf - alength/2
             ytail = self.yhalf + alength/2
             segments.append(Segment([(self.x0, ytail), (self.x0, yhead)],
-                                    arrow='->', arrowwidth=awidth, arrowlength=alength))
+                                    arrow='->', arrowwidth=awidth, arrowlength=alength, **self.kwargs))
         return segments
 
 
@@ -209,7 +209,7 @@ class WaveH(Wave1):
             ytail = self.yhalf - alength/2
             yhead = self.yhalf + alength/2
             segments.append(Segment([(self.x0, ytail), (self.x0, yhead)],
-                                    arrow='->', arrowwidth=awidth, arrowlength=alength))
+                                    arrow='->', arrowwidth=awidth, arrowlength=alength, **self.kwargs))
         return segments
 
 
