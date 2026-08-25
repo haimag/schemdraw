@@ -26,10 +26,14 @@ Timing Diagrams
 
 .. jupyter-execute::
 
-    logic.TimingDiagram(
-        {'signal': [
-            {'name': 'A', 'wave': '0..1..01.'},
-            {'name': 'B', 'wave': '101..0...'}]})
+    logic.TimingDiagram({
+      'signal': [
+        {'name': 'clk_t/c', 'wave': 'q........'},
+        {'name': 'B',       'wave': '060', 'async': [0, 1.1, 3.1, 9]}
+      ],
+      'edge': ['[0^:2]-[1v:2]{#080}'],
+      'head': {'tick': 0, 'every': 2},
+    })
 
 The input is a dictionary containing a `signal`, which is a list of each wave to show in the diagram. Each signal is a dictionary which typically contains a `name` and `wave`.
 An empty dictionary leaves a blank row in the diagram.
@@ -41,84 +45,50 @@ Waveform Types
 
 All the waveform types are shown below.
 
+
++------------+------------------------------+------------+-------------------------------+
+| Type       | Description                  | Type       | Description                   |
++============+==============================+============+===============================+
+| N,n        | Clock signal, `N` with arrows| P,p        | Inverted clock signal,        |
+|            |                              |            | `P` with arrows               |
++------------+------------------------------+------------+-------------------------------+
+| C,c [1]_   | Clock signal with rise time  | 0/1        | Low/High state with rise time |
++------------+------------------------------+------------+-------------------------------+
+| H,h        | High state, no rise time,    | L,l        | Low state, no rise time,      |
+|            | `H` with arrow               |            | `L` with arrow                |
++------------+------------------------------+------------+-------------------------------+
+| z          | High impedance, halfway up   | 2-9,x      | Data states, different colors |
++------------+------------------------------+------------+-------------------------------+
+| d,u        | Low/High with pull-up        | `|`        | Tick gaps                     |
++------------+------------------------------+------------+-------------------------------+
+| Q,q [1]_   | Differential clock,          | I,i [1]_   | Inverted Differential clock,  |
+|            | `Q` with arrows              |            | `I` with arrows               |
++------------+------------------------------+------------+-------------------------------+
+| W,w [1]_   | Differential High,           | V,v [1]_   | Differential Low,             |
+|            | `W` with arrow               |            | `V` with arrow                |
++------------+------------------------------+------------+-------------------------------+
+| b [1]_     | Half-period bit state        | e [1]_     | Empty state                   |
++------------+------------------------------+------------+-------------------------------+
+
+
 .. jupyter-execute::
 
     logic.TimingDiagram(
         {'signal':[
-            {'name': 'n', 'wave': 'n.......'},
-            {'name': 'p', 'wave': 'p.......'},
-            {'name': 'N', 'wave': 'N.......'},
-            {'name': 'P', 'wave': 'P.......'},
-            {'name': 'c', 'wave': 'c.......'},
-            {'name': 'C', 'wave': 'C.......'},
-            {'name': '0, 1', 'wave': '0.1.0.1.'},
-            {'name': 'l, L, h, H', 'wave': 'l.h.L.H.'},
-            {'name': '2-9, x', 'wave': '23456789x', 'data': '2 3 4 5 6 7 8 9 x'},
-            {'name': 'z', 'wave': '0.z....1'},
-            {'name': 'W, w', 'wave': '0wW.w.W0'},
-            {'name': 'd, u', 'wave': '1.d..u..'},
-            {'name': 'Q, b', 'wave': 'Q..0.bbb'},
+            {'name': 'n,N',     'wave': 'n...N....'},
+            {'name': 'p,P',     'wave': 'p...P....'},
+            {'name': 'c',       'wave': 'c...|....'},
+            {'name': 'C',       'wave': 'C...|....'},
+            {'name': '0, 1',    'wave': '0.1.0.1..'},
+            {'name': 'l,L,h,H', 'wave': 'l.h.L.H..'},
+            {'name': '2-9, x',  'wave': '23456789x', 'data': '2 3 4 5 6 7 8 9 x'},
+            {'name': 'z',       'wave': '0.z....1.'},
+            {'name': 'd,u',     'wave': '1.d..u...'},
+            {'name': 'w,v,W,V', 'wave': '0wvWVWV0.'},
+            {'name': 'i,I',     'wave': '0iI....0.'},
+            {'name': 'q,Q,b,e', 'wave': '0qQ..0beb'},
         ]}
     )
-
-
-+------------+------------------------------------+
-| Wave Type  | Description                        |
-+============+====================================+
-| n          | Clock signal                       |
-+------------+------------------------------------+
-| n          | Clock signal                       |
-+------------+------------------------------------+
-| p          | Inverted clock signal              |
-+------------+------------------------------------+
-| N          | Clock signal with arrows           |
-+------------+------------------------------------+
-| P          | Inverted clock signal with arrows  |
-+------------+------------------------------------+
-| c, C [1]_  | Clock signals with rise time       |
-+------------+------------------------------------+
-| 0          | Low state, with rise time          |
-+------------+------------------------------------+
-| 1          | High state, with rise time         |
-+------------+------------------------------------+
-| l          | Low state, no rise time            |
-+------------+------------------------------------+
-| h          | High state, no rise time           |
-+------------+------------------------------------+
-| L          | Low state with arrow               |
-+------------+------------------------------------+
-| H          | High state with arrow              |
-+------------+------------------------------------+
-| 2-9        | Data states, with different colors |
-+------------+------------------------------------+
-| x          | Invalid or don't-care data state   |
-+------------+------------------------------------+
-| z          | High impedance state, halfway up   |
-+------------+------------------------------------+
-| d          | Low state with pull-down curve     |
-+------------+------------------------------------+
-| u          | High state with pull-up curve      |
-+------------+------------------------------------+
-| Q, q [1]_  | Differential clock                 |
-+------------+------------------------------------+
-| W, w [1]_  | Differential signal                |
-+------------+------------------------------------+
-| b  [1]_    | Half-period bit state              |
-+------------+------------------------------------+
-| e  [1]_    | Empty state                        |
-+------------+------------------------------------+
-
-
-
-Example:
-
-.. jupyter-execute::
-
-    logic.TimingDiagram(
-        {'signal': [
-            {'name': 'clk', 'wave': 'P......'},
-            {'name': 'bus', 'wave': 'x.==.=x', 'data': ['head', 'body', 'tail']},
-            {'name': 'wire', 'wave': '0.1..0.'}]})
 
 
 Signal Parameters
@@ -324,7 +294,7 @@ Here, the first pulse is 100%, the second at 50%, and the third at 20%.
 Asynchronous Signals
 ********************
 
-WaveDrom does not have a means for defining asynchronous signals - all waves must transition on period boundaries. Schemdraw adds asyncrhonous signals using the `async` parameter, as a list of period multiples for each transition in the wave. Note the beginning and end time of the wave must also be specified, so the length of the `async` list must be one more than the length of `wave`.
+WaveDrom does not have a means for defining asynchronous signals - all waves must transition on period boundaries. Schemdraw adds asyncrhonous signals using the `async` parameter, as a list of period multiples for each transition in the wave. Note the beginning and end time of the wave must also be specified, so the length of the `async` list must be one more than the length of `wave`. Data labels are supported, with the same formatting as regular waves (`data` as a list or space-separated string, or `{a b}` to repeat a pattern over the entire wave).
 
 .. jupyter-execute::
     :emphasize-lines: 4
@@ -332,7 +302,8 @@ WaveDrom does not have a means for defining asynchronous signals - all waves mus
     logic.TimingDiagram(
         {'signal': [
             {'name': 'clk', 'wave': 'n......'},
-            {'name': 'B', 'wave': '010', 'async': [0, 1.6, 4.25, 7]}]},
+            {'name': 'B', 'wave': '34|5', 'data': 'a b', 'async': [0, 1.6, 4.25, 5, 7]}],
+	'head': {'tick': 0, 'every': 1}},    
         risetime=.03)
 
 Shading

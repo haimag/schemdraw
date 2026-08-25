@@ -18,7 +18,7 @@ from ..style import validate_color, validate_linestyle
 from .timingwaves import (
     Wave0, Wave1, WaveL, WaveH, Wavez,
     WaveV, WaveU, WaveD, WaveC, WaveCbar,
-    WaveClk, WaveQ, WaveE, WaveW, getsplit
+    WaveClk, WaveIQ, WaveE, WaveWV, WaveWVa, WaveIQa, getsplit
     )
 
 LabelInfo = namedtuple('LabelInfo', ['name', 'row', 'height', 'level'])
@@ -39,9 +39,9 @@ def state_level(state: str, prev: bool = False) -> str:
 
     if state in '23456789=xb':
         return 'V'  # Low and High
-    if state in '1unNhHQw':
+    if state in '1unNhHiwWI':
         return '1'
-    if state in '0dpPlLqW':
+    if state in '0dpPlLqvVQ':
         return '0'
     if state in 'e':
         return '-'
@@ -146,12 +146,16 @@ class TimingDiagram(Element):
                    'P': WaveClk,
                    'c': WaveC,
                    'C': WaveCbar,
-                   'Q': WaveQ,
-                   'q': WaveQ,
-                   'b': WaveQ,
+                   'i': WaveIQ,
+                   'q': WaveIQ,
+                   'I': WaveIQa,
+                   'Q': WaveIQa,
+                   'b': WaveIQ,
                    'e': WaveE,
-                   'w': WaveW,
-                   'W': WaveW,
+                   'w': WaveWV,
+                   'v': WaveWV,
+                   'W': WaveWVa,
+                   'V': WaveWVa,
                    }
     _element_defaults = {
         'yheight': 0.5,
@@ -390,14 +394,19 @@ class TimingDiagram(Element):
         '''
         times = signal.get('async', '')
         wave = signal.get('wave', '')
+        datasize = signal.get('fontsize', self.datasize)
         waverise = signal.get('risetime', self.risetime)
         wavekwargs = ChainMap({'color': signal.get('color', None),
                                'lw': signal.get('lw', 1),
                                'clip': self.kwargs.get('clip')})
 
         data = copy.copy(signal.get('data', []))
-        if not isinstance(data, list):
-            data = data.split()  # Sometimes it's a space-separated string...
+        if isinstance(data, str):
+            if data.startswith('{'):
+                data = data[1:-1].replace(',', ' ').split()
+                data = (data * len(wave))[:len(wave)]
+            else:
+                data = data.split()
         if not isinstance(times, list):
             times = [float(f) for f in times.split()]
 
@@ -407,10 +416,21 @@ class TimingDiagram(Element):
         period = 2*self.yheight*signal.get('period', 1) * self.hscale
         y1 = y0 + self.yheight
         pstate = '-'
-        for i, state in enumerate(wave):
+        i = 0
+        while i < len(wave):
+            state = wave[i]
+            if state == '|':  # Tick gap with no state to extend: draw only the split
+                xsplit = times[i] * period
+                self.segments.extend(getsplit(xsplit, y0, y1))
+                i += 1
+                continue
+
             t0 = times[i]
-            t1 = times[i+1]
-            nstate = wave[i+1] if i < len(wave)-1 else '-'
+            k = i + 1
+            while k < len(wave) and wave[k] == '|':
+                k += 1  # Extend state through tick gaps
+            t1 = times[k]
+            nstate = wave[k] if k < len(wave) else '-'
             x = t0*period
             xend = t1*period
             params = {'state': state,
@@ -427,12 +447,20 @@ class TimingDiagram(Element):
                       'rise': waverise,
                       'data': data,
                       'datacolor': self.datacolor,
+                      'datasize': datasize,
                       'kwargs': wavekwargs}
 
             wavecls = self._wavelookup.get(state, WaveV)
             self.segments.extend(wavecls(params).segments())
-            x = xend
+
+            # Draw tick gaps at the midpoint of each '|' interval
+            for j in range(i+1, k):
+                print(f"{j=}, {times[j]} ")
+                xsplit = times[j] * period
+                self.segments.extend(getsplit(xsplit, y0, y1))
+
             pstate = state
+            i = k
 
     def _drawdata(self, signal, y0, periods):
         ''' Draw data only '''
