@@ -164,11 +164,11 @@ class TimingDiagram(Element):
         'fontsize': 12,
         'datafontsize': 11,
         'nodesize': 8,
-        'namecolor': 'blue',
+        'namecolor': '#00007F',
         'datacolor': None,  # Inherit
         'nodecolor': None,  # Inherit
         'gridcolor': '#DDDDDD',
-        'gridlw': 1,
+        'gridlw': .5,
         'gridls': ':',
         'edgecolor': 'blue',
         'tickcolor': '#888888',
@@ -216,7 +216,7 @@ class TimingDiagram(Element):
             periods = max(len(w.get('wave', [])) for w in signals_flat if 'async' not in w)
         except ValueError:
             periods = 0
-        periods = max(periods, (max(w.get('async', [0])[-1] for w in signals_flat)))
+        periods = int(max(periods, (max(w.get('async', [0])[-1] for w in signals_flat))))
         if self.grid:
             self._drawgrid(periods, height)
 
@@ -310,7 +310,7 @@ class TimingDiagram(Element):
         datasize = signal.get('fontsize', self.datasize)
         waverise = signal.get('risetime', self.risetime)
         wavekwargs = ChainMap({'color': signal.get('color', None),
-                               'lw': signal.get('lw', 1),
+                               'lw': signal.get('lw', 0.8),
                                'clip': self.kwargs.get('clip')})
         data = copy.copy(signal.get('data', []))
         if isinstance(data, str):
@@ -397,7 +397,7 @@ class TimingDiagram(Element):
         datasize = signal.get('fontsize', self.datasize)
         waverise = signal.get('risetime', self.risetime)
         wavekwargs = ChainMap({'color': signal.get('color', None),
-                               'lw': signal.get('lw', 1),
+                               'lw': signal.get('lw', 0.8),
                                'clip': self.kwargs.get('clip')})
 
         data = copy.copy(signal.get('data', []))
@@ -410,8 +410,16 @@ class TimingDiagram(Element):
         if not isinstance(times, list):
             times = [float(f) for f in times.split()]
 
+        if len(wave) + 1 > len(times):
+            times += [times[-1]]*(len(wave) + 1 - len(times))
+        elif len(wave) + 1 < len(times):
+            times = times[: len(wave)] + times[-1:]
         if len(wave) + 1 != len(times):
-            raise ValueError('len(times) must be one more than len(wave).')
+            raise ValueError(f'''
+            len(wave) + 1 != len(times).
+                {len(wave)= }, {wave=}
+                {len(times)=}, {times=}
+            ''')
 
         period = 2*self.yheight*signal.get('period', 1) * self.hscale
         y1 = y0 + self.yheight
@@ -666,6 +674,12 @@ class TimingDiagram(Element):
                     [p0, p1, pn], lw=1, ls=ls, color=color, arrow=arrow, zorder=3))
 
             if label:
+                w, _, _ = text_size(label, size=self.nodesize)
+                w = w*PTS_TO_UNITS
+                pad = 2*PTS_TO_UNITS
+                if w + 2*pad + .1 > math.hypot(pn.x-p0.x, pn.y-p0.y):
+                    linex = max(p0.x, pn.x)
+                    center = Point((linex + w/2 + pad + .05, center.y))
                 self.segments.append(SegmentText(center, label, fontsize=self.nodesize,
                                                  color=self.nodecolor,
                                                  bgcolor='bg',

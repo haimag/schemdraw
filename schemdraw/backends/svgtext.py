@@ -21,6 +21,7 @@ import re
 
 from ..util import Point
 from ..types import Halign, Valign, RotationMode
+from .svgunits import fmt
 
 
 # Conversion from Latex codes to unicode characters.
@@ -365,8 +366,8 @@ def text_tosvg(text: str, x: float, y: float, font: str = 'Arial', size: float =
 
     for line in text.splitlines():
         tspan = mathtextsvg(line)
-        tspan.set('x', str(x))
-        tspan.set('dy', str(size))
+        tspan.set('x', fmt(x))
+        tspan.set('dy', fmt(size))
         textelm.append(tspan)
 
     boxx = x
@@ -424,12 +425,12 @@ def text_tosvg(text: str, x: float, y: float, font: str = 'Arial', size: float =
     elif rotation != 0:
         xform = f'rotate({-rotation} {x} {y})'
 
-    textelm.set('x', str(x))
-    textelm.set('y', str(ytext-h))
+    textelm.set('x', fmt(x))
+    textelm.set('y', fmt(ytext-h))
     if not batik:
         textelm.set('dominant-baseline', baseline)
     textelm.set('fill', color)
-    textelm.set('font-size', str(size))
+    textelm.set('font-size', fmt(size))
     textelm.set('font-family', font)
     textelm.set('text-anchor', anchor)
     if decoration is not None:
@@ -452,16 +453,16 @@ def text_tosvg(text: str, x: float, y: float, font: str = 'Arial', size: float =
         topelm = ET.Element('g')  # Put everything in a group
         topelm.append(textelm)
         circ = ET.SubElement(topelm, 'circle')
-        circ.set('cx', str(x))
-        circ.set('cy', str(y))
+        circ.set('cx', fmt(x))
+        circ.set('cy', fmt(y))
         circ.set('r', '1.5')
         circ.set('stroke', 'red')
         circ.set('fill', 'red')
         rect = ET.SubElement(topelm, 'rect')
-        rect.set('x', str(pxmin))
-        rect.set('y', str(pymin))
-        rect.set('width', str(pxmax-pxmin))
-        rect.set('height', str(pymax-pymin))
+        rect.set('x', fmt(pxmin))
+        rect.set('y', fmt(pymin))
+        rect.set('width', fmt(pxmax-pxmin))
+        rect.set('height', fmt(pymax-pymin))
         rect.set('style', 'stroke:red;stroke-width:1;fill:none')
         textelm = topelm
 

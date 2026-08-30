@@ -20,20 +20,11 @@ except ImportError:
 from ..types import Capstyle, Joinstyle, Linestyle, BBox, Halign, Valign, RotationMode, TextMode, XY, Gradient
 from ..util import Point
 from . import svgtext
-from .svgunits import parse_size_to_px, PT_PER_IN
-
-precision = 3
+from .svgunits import parse_size_to_px, PT_PER_IN, fmt
 
 LINE_WIDTH = 2     # Default line width is 2 points
 
 ET.register_namespace("", "http://www.w3.org/2000/svg")
-
-
-def fmt(f: float) -> str:
-    ''' String formatter, stripping trailing zeros '''
-    p = f'.{precision}f'
-    s = format(float(f), p)
-    return s.rstrip('0').rstrip('.')  # Strip trailing zeros
 
 
 class Config:
@@ -100,7 +91,7 @@ config = Config()
 
 
 hatchpattern = '''<defs><pattern id="hatch" patternUnits="userSpaceOnUse" width="4" height="4">
-<path d="M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2" style="stroke:black; stroke-width:.5" /></pattern></defs>'''
+<path d="M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2" style="stroke:#999; stroke-width:.5" /></pattern></defs>'''
 
 
 def isnotebook():
@@ -131,7 +122,7 @@ def getstyle(color: Optional[str] = None, ls: Optional[Linestyle] = None, lw: Op
     else:
         s += f'fill:{str(fill).lower()};'
     if lw:
-        s += f'stroke-width:{lw};'
+        s += f'stroke-width:{fmt(lw)};'
     if ls:
         dash = {'--': '7.4,3.2',
                 'dashed': '7.4,3.2',
@@ -167,7 +158,7 @@ def text_size(text: str,
         Returns:
             width, height, descender
     '''
-    if font is None or font.lower() in ['sans-serif', 'Arial']:
+    if font is None or font.lower() in ['sans-serif', 'arial']:
         font = 'sans'
 
     if (ziamath and
@@ -292,7 +283,7 @@ class Figure:
             return
 
         x0, y0 = self.xform(x, y)
-        if fontfamily.lower() in ['sans-serif', 'Arial']:
+        if fontfamily.lower() in ['sans-serif', 'arial']:
             fontfamily = 'sans'
 
         if valign in ['base', 'baseline']:
@@ -338,7 +329,7 @@ class Figure:
                                          rotation=rotation, rotation_mode=rotation_mode,
                                          testmode=False, href=href, decoration=decoration,
                                          batik=config.useBatik)
-        
+
         self.addclip(texttag, clip)
         self.svgelements.append((zorder, texttag))
 
@@ -375,7 +366,7 @@ class Figure:
         self.svgelements.append((zorder, et))
 
     def arrow(self, xy: XY, theta: float,
-              arrowwidth: float = .15, arrowlength: float = .25,
+              arrowwidth: float = .08, arrowlength: float = .21,
               color: str = 'black', lw: float = 2, clip: Optional[BBox] = None, zorder: int = 1) -> None:
         ''' Draw an arrowhead '''
         x, y = self.xform(*xy)
@@ -661,9 +652,9 @@ class Figure:
             svg = ET.Element('{http://www.w3.org/2000/svg}svg')
             svg.set('xmlns:xlink', 'http://www.w3.org/1999/xlink')
             svg.set('xml:lang', 'en')
-            svg.set('height', f'{self.pxheight}pt')
-            svg.set('width', f'{self.pxwidth}pt')
-            svg.set('viewBox', f'{x0} {y0} {self.pxwidth} {self.pxheight}')
+            svg.set('height', f'{fmt(self.pxheight)}pt')
+            svg.set('width', f'{fmt(self.pxwidth)}pt')
+            svg.set('viewBox', f'{fmt(x0)} {fmt(y0)} {fmt(self.pxwidth)} {fmt(self.pxheight)}')
             if self._bgcolor:
                 svg.set('style', f'background-color:{self._bgcolor};')
         else:

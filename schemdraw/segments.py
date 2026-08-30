@@ -103,8 +103,8 @@ class Segment:
                  joinstyle: Optional[Joinstyle] = None,
                  fill: Optional[str] = None,
                  arrow: Optional[str] = None,
-                 arrowwidth: float = 0.15,
-                 arrowlength: float = 0.25,
+                 arrowwidth: float = 0.08,
+                 arrowlength: float = 0.21,
                  clip: Optional[BBox] = None,
                  zorder: Optional[int] = None,
                  visible: bool = True):

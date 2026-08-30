@@ -46,8 +46,8 @@ def diffarrow(xcross: float, rise: float, y0: float, y1: float, kwargs: dict) ->
     '''
     height = y1 - y0
     line_length = math.hypot(rise, height)
-    arrowlength = min(.25, .75*line_length)
-    arrowwidth = .12
+    arrowlength = min(.21, .75*line_length)
+    arrowwidth = .08
     yhalf = (y0 + y1)/2
     dx = rise / line_length
     dy = height / line_length
@@ -151,8 +151,8 @@ class Doublesigmoid:
 
         self.rate = 25  # Adjust curvature
         self.height = self.y1-self.y0
-        self.curve1x = self.x0 - self.gap*self.height/2
-        self.curve2x = self.x0 + self.gap*self.height/2
+        self.curve1x = self.x0 - self.gap*self.height/2 + 0.1
+        self.curve2x = self.x0 + self.gap*self.height/2 + 0.1
         self.top = self.y1 + self.height * self.extend
         self.bot = self.y0 - self.height * self.extend
 
@@ -256,8 +256,8 @@ class WaveL(Wave0):
         ''' Get segments for this wave section '''
         segments = super().segments()
         if self.state == 'L' and not _isdiff(self.pstate):
-            alength = .25
-            awidth = .12
+            alength = .21
+            awidth = .08
             yhead = self.yhalf - alength/3*2
             ytail = self.yhalf + alength/3
             segments.append(Segment([(self.x0, ytail), (self.x0, yhead)],
@@ -311,8 +311,8 @@ class WaveH(Wave1):
         ''' Get segments for this wave section '''
         segments = super().segments()
         if self.state == 'H' and not _isdiff(self.pstate):
-            alength = .25
-            awidth = .12
+            alength = .21
+            awidth = .08
             ytail = self.yhalf - alength/3
             yhead = self.yhalf + alength/3*2
             segments.append(Segment([(self.x0, ytail), (self.x0, yhead)],
@@ -506,8 +506,8 @@ class WaveClk(Wave0):
         if self.state in 'NP':
             period = self.params['period']
             periods = self.params['periods']
-            alength = .25
-            awidth = .12
+            alength = .21
+            awidth = .10
             yhead = self.yhalf - alength/3*2
             ytail = self.yhalf + alength/3
             if self.state == 'P':
@@ -742,13 +742,17 @@ class WaveWV(Wave0):
             verts.append((self.x0, own_y))
         elif prev_level == own_level and prev_level != 'V':
             verts.append((self.x0, own_y))
+        elif prev_level == 'V' and own_level != 'V':
+            # From a data block: both lines start at the notch where the
+            # block edge crosses the midline, then go to their own level,
+            # so they meet the edge without crossing it.
+            verts.append((self.x0 + self.rise/2, self.yhalf))
+            verts.append((self.x0 + self.rise, own_y))
         elif need_entry_rise:
             if prev_level == 'z':
                 verts.append((self.x0, self.yhalf))
             else:
                 verts.append((self.x0, prev_y))
-            verts.append((self.x0 + self.rise, own_y))
-        elif prev_level == 'V' and own_level != 'V':
             verts.append((self.x0 + self.rise, own_y))
         elif need_entry_fall:
             if prev_level == 'z':
@@ -769,12 +773,19 @@ class WaveWV(Wave0):
         if self.nstate in 'qiIQ':
             verts.append((self.xend, own_y))
         elif need_exit_rise:
-            if next_is_z:
+            if next_level == 'V':
+                # Into a data block: both lines end at the notch where
+                # the block edge crosses the midline, so they meet the
+                # edge without crossing it.
+                verts.append((self.xend + self.rise/2, self.yhalf))
+            elif next_is_z:
                 verts.append((self.xend + self.rise / 2, self.yhalf))
             else:
                 verts.append((self.xend + self.rise, next_y))
         elif need_exit_fall:
-            if next_is_z:
+            if next_level == 'V':
+                verts.append((self.xend + self.rise/2, self.yhalf))
+            elif next_is_z:
                 verts.append((self.xend + self.rise / 2, self.yhalf))
             else:
                 verts.append((self.xend + self.rise, next_y))

@@ -9,6 +9,17 @@ PC_PER_IN = 6.
 
 PX_PER_PT = PX_PER_IN / PT_PER_IN
 
+precision = 3
+
+
+def fmt(f: float) -> str:
+    ''' String formatter, stripping trailing zeros '''
+    p = f'.{precision}f'
+    s = format(float(f), p)
+    s = s.rstrip('0').rstrip('.')  # Strip trailing zeros
+    return '0' if s == '-0' else s  # Normalize negative zero
+
+
 TO_PX = {
     'in': PX_PER_IN,
     'cm': PX_PER_IN / CM_PER_IN,

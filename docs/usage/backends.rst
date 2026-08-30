@@ -76,6 +76,14 @@ The decimal precision of SVG elements can be set using
 
     schemdraw.svgconfig.precision = 2
 
+By default, coordinates are snapped to the nearest half-point so lines
+and text rasterize crisply on screen. Disable snapping to keep exact
+geometry:
+
+.. code-block:: python
+
+    schemdraw.svgconfig.snap = False
+
 
 
 Backend Comparison
