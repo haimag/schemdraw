@@ -250,7 +250,8 @@ class Figure:
              joinstyle: Joinstyle = 'round', clip: Optional[BBox] = None, zorder: int = 2) -> None:
         ''' Plot a path '''
         et = ET.Element('path')
-        d = 'M {},{} '.format(*self.xform(x[0], y[0]))
+        xx, yy = self.xform(x[0], y[0])
+        d = f'M {fmt(xx)},{fmt(yy)} '
         for xx, yy in zip(x[1:], y[1:]):
             if str(xx) == 'nan' or str(yy) == 'nan':
                 d += 'M '

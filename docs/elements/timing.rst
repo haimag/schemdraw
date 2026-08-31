@@ -31,7 +31,7 @@ Timing Diagrams
         {'name': 'clk_t/c', 'wave': 'q........'},
         {'name': 'B',       'wave': '060', 'async': [0, 1.1, 3.1, 9]}
       ],
-      'edge': ['[0^:2]-[1v:2]{#080}'],
+      'edge': ['[0.3:2]-[1.8:2]{#080}'],
       'head': {'tick': 0, 'every': 2},
     })
 
@@ -144,7 +144,7 @@ Signals may also be nested into different groups:
           ['Set 2',
             {'name': 'C', 'wave': '0..1..01.'},
             {'name': 'D', 'wave': '101..0...'}]
-                   ]})
+    ]})
 
 
 .. _nodes:
@@ -166,9 +166,9 @@ For example, "a->b" draws an arrow pointing from node a to b, and "c-d" draws a 
 
     logic.TimingDiagram(
         {'signal': [
-            {'name': 'A', 'wave': '0..1..01.', 'node': '...a.....'},
-            {'name': 'B', 'wave': '101..0...', 'node': '.....b...'}],
-         'edge': ['a~>b']
+            {'name': 'A', 'wave': '0..1..01.', 'node': '...A.....'},
+            {'name': 'B', 'wave': '101..0...', 'node': '.....B...'}],
+         'edge': ['A~>B']
         })
 
 Line and arrow types include:
@@ -188,15 +188,15 @@ Edge types are illustrated below.
 
     logic.TimingDiagram(
         {'signal':[
-            {'wave': '222222', 'node': '.a.b.c'},
-            {'wave': '222222', 'node': 'd.e...'},
+            {'wave': '222222', 'node': '.A.B.C'},
+            {'wave': '222222', 'node': 'D.E...'},
         ],
         'edge': [
-            'a-b',
-            'b<->c{green}',
-            'd-|-a{red}',
-            'a-e{purple,:}',
-            'e<~c{orange}',
+            'A-B            A-B',
+            'B<->C{green}   B<->C',
+            'D-|-A{red}     D-|-A',
+            'A-E{purple,:}  A-E',
+            'E<~C{orange}   E<~C',
         ]}
     )
 
@@ -214,7 +214,11 @@ Each edge string using this syntax takes the form
 
 Everything after the first space will be drawn as the label in the center of the line.
 The values in square brackets designate the start and end position of the line.
-`WaveNum` is the integer row number (starting at 0) of the wave, and `Period` is the possibly fractional number of periods in time for the node. `WaveNum` may be appended by a `^` or `v` to designate notations just above, or just below, the wave, respectively.
+`WaveNum` is the row number (starting at 0) of the wave, and `Period` is the possibly fractional number of periods in time for the node.
+`WaveNum` may include a fractional part to position the node above or below the wave instead of at its vertical center [1]_.
+
+* A fractional part between `0 ~ 0.5` draws the node at that fraction of a wave height above the top of the wave.
+* A fractional part between `0.5 ~ 1` draws the node at `fraction - 0.5` of a wave height below the bottom of the wave.
 
 Between the two square-bracket expressions is the standard line/arrow type designator. In optional curly braces, the line color and linestyle may be entered.
 
@@ -226,10 +230,10 @@ Some examples are shown here:
     logic.TimingDiagram(
         {'signal': [
             {'name': 'A', 'wave': 'x3...x'},
-            {'name': 'B', 'wave': 'x6.6.x'}],
-         'edge': ['[0^:1]+[0^:5] $t_1$',
-                  '[1^:1]<->[1^:3] $t_o$',
-                  '[0^:3]-[1v:3]{gray,:}',
+            {'name': 'B', 'wave': 'x66..x'}],
+         'edge': ['[0.3:1]+[0.3:5] $t_1$',
+                  '[1.3:1]<->[1.3:2] Loooooooooooooog',
+                  '[0.3:2]-[1.8:2]{gray,:}',
                  ]},
         ygap=.5, grid=False)
 
@@ -247,7 +251,7 @@ The following examples show the difference.
             {'wave': '222222'},
         ],
         'edge': [
-            '[0^:1]-[1v:1]{red}',
+            '[0.3:1]-[1.8:1]{red}',
         ]},
         risetime=.3
     )
@@ -260,7 +264,7 @@ The following examples show the difference.
             {'wave': '222222'},
         ],
         'edge': [
-            '[0^:1]-[1v:1]{red}',
+            '[0.3:1]-[1.8:1]{red}',
         ]},
         risetime=.3, nodealign='clock'
     )
@@ -303,7 +307,7 @@ WaveDrom does not have a means for defining asynchronous signals - all waves mus
         {'signal': [
             {'name': 'clk', 'wave': 'n......'},
             {'name': 'B', 'wave': '34|5', 'data': 'a b', 'async': [0, 1.6, 4.25, 5, 7]}],
-	'head': {'tick': 0, 'every': 1}},    
+        'head': {'tick': 0, 'every': 1}},
         risetime=.03)
 
 Shading
@@ -333,6 +337,46 @@ The `Signals` parameter may be an asterisk * to shade every signal row, or it ma
             "5,7 1:2 #ddf",
         ]
         })
+
+
+Extended Tick Gaps
+******************
+
+Schemdraw adds additional “tgap” string, drawing a break symbol spanning one or more signal rows at a given tick position [1]_.
+Each item in the tgap list is a string with the format
+
+.. code-block:: python
+
+    'Tick [rows]'
+
+The `Tick` parameter is the tick position at which to draw the gap, and may be a fractional number.
+The optional `rows` parameter is a bracketed expression applied to the signal rows (numbered from 0) like a Python list slice or index. With no rows expression, the gap spans every signal row. Slices follow Python list semantics, including negative indices (relative to the last row) and end-exclusive ranges:
+
+    * ``"[1]"`` - row 1 only
+    * ``"[1:]"`` - rows 1 through last
+    * ``"[:3]"`` - rows 0 through 2
+    * ``"[1:-1]"`` - rows 1 through second-to-last
+    * ``"[1:8:2]"`` - rows 1, 3, 5, 7
+    * ``"[1, 8, 2]"`` - rows 1, 8, and 2
+
+.. jupyter-execute::
+
+    logic.TimingDiagram({
+      'signal': [
+        {'name': '0', 'wave': 'q..........'},
+        {'name': '1', 'wave': '26..7..8.2.'},
+        {'name': '2', 'wave': '26..7..8.2.'},
+        {'name': '3', 'wave': '26..7..8.2.'},
+        {'name': '4', 'wave': '26..7..8.2.'},
+      ],
+      'head': {'tick': 0, 'every': 1},
+      'tgap': [
+            "2.5",          # tick gap at 2.5 tick, draw all rows
+            "5.2 [1]",      # tick gap at 5.2 tick, draw row 1 only
+            "7.7 [2:4]",    # tick gap at 7.7 tick, draw rows 2, 3
+            "9.5 [1,3]",    # tick gap at 9.5 tick, draw rows 1 and 3
+      ]
+    })
 
 
 Titles
@@ -427,6 +471,44 @@ Notice lack of quoting on the dictionary keys, requiring the `from_json` method 
                     {'signal': [
                         {'name': 'A', 'wave': '0..1..01.'},
                         {'name': 'B', 'wave': '101..0...'}]})
+
+Extended Example
+****************
+
+The examples make use of Schemdraw's extended 'edge' notation for labeling
+timings just above and below the wave.
+
+.. jupyter-execute::
+
+    import numpy as np
+
+    t=22
+    logic.TimingDiagram({
+        'head': {'tick': 0, 'every': 2},
+        'tgap': ['5.2 [:]'],
+        "shade": [
+                  ','.join([f'{i}' for i in range(0,28,4)]) + " * #eee" ,
+                  ','.join([f'{i}' for i in range(2,28,4)]) + " * #eed" ,
+                ],
+        'edge': [
+            '[{a}:{c}]-[{b}:{c}]{{#008}}'.format(a=0.3, b=9.1, c=2.9),
+            '[{a}:{c}]-[{b}:{c}]{{#008}}'.format(a=0.3, b=8.9, c=12),
+            '[{a}:{b}]<->[{a}:{c}]{{#008}} {d}'.format(a=8, b=2.9, c=12, d='DLY'),
+            ],
+        'signal': [
+            {'data': [f'P{i%4}' if i%4==0 else '' for i in range(2,t)]},
+            {'name': 'ck_t/c', 'wave': 'q'+'.'*(t-1) },
+            {'name': 'cs', 'wave': '010', 'async': [0, 1.5, 2.5, t]},
+            {'name': 'ca', 'wave': 'x44x', 'data': 'v '*2, 'async': [0, *np.arange(1.5,4.5,1), t]},
+            {'name': 'cmd','wave': 'x4x', 'data': 'cmd', 'async': [0, 1.5, 3.5, t]},
+            {},
+            {'name': 'dqs_t/c', 'wave': 'xv'+'wv'*2+'Wv'*8+'wv', 'async': [0, 8, *np.arange(10,t,0.5)]},
+            {'name': 'dq', 'wave': 'x'+'5'*16+'x', 'async': [0, *np.arange(11.75,t,0.5)], 'data': [f'{i}' for i in range(16)]},
+            {},
+        ]},
+
+        grid=False,
+    )
 
 
 Bit Field Diagrams

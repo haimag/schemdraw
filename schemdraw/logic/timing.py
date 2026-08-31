@@ -99,6 +99,73 @@ def getlabels(sig, row: int = 0, level: int = 0) -> list[LabelInfo]:
     return lbl
 
 
+def _split_tgap(s: str) -> list[str]:
+    ''' Split a tgap string on whitespace or commas, keeping bracketed expressions together '''
+    parts = []
+    cur = ''
+    depth = 0
+    for ch in s:
+        if ch == '[':
+            depth += 1
+        elif ch == ']':
+            depth -= 1
+        if depth == 0 and (ch.isspace() or ch == ','):
+            if cur:
+                parts.append(cur)
+                cur = ''
+        else:
+            cur += ch
+    if cur:
+        parts.append(cur)
+    return parts
+
+
+def tgap_rows(rowspec: list[str], nsignals: int) -> list[int]:
+    ''' Parse the row-spec portion of a tgap string into a list of row numbers.
+
+        The row spec is a single bracketed expression applied to a list of
+        nsignals rows like a Python list slice or index:
+
+            "2.5"          - all rows
+            "2.5 [1]"      - row 1 only
+            "2.5 [1:]"     - rows 1 through last
+            "2.5 [:3]"     - rows 0 through 2 (end exclusive)
+            "2.5 [1:-1]"   - rows 1 through second-to-last
+            "2.5 [1:8:2]"  - rows 1, 3, 5, 7
+            "2.5 [1, 8, 2]" - rows 1, 8, and 2
+
+        Negative indices and out-of-range slices follow Python list semantics
+        (indices relative to the end, slices clamped); an out-of-range single
+        index or row list raises ValueError.
+    '''
+    if not rowspec:
+        return list(range(nsignals))
+    if len(rowspec) != 1 or not (rowspec[0].startswith('[') and rowspec[0].endswith(']')):
+        raise ValueError('tgap row spec must be a bracketed Python slice, such as "[1:5]"')
+
+    expr = rowspec[0][1:-1].replace(' ', '')
+    if not expr:
+        return list(range(nsignals))  # [] spans all rows
+    if ',' in expr:
+        try:
+            rows = [int(x) for x in expr.split(',')]
+        except ValueError as exc:
+            raise ValueError(f'invalid tgap row list {rowspec[0]!r}') from exc
+        if not all(0 <= r < nsignals for r in rows):
+            raise ValueError(f'tgap row list {rowspec[0]!r} out of bounds, 0 <= row < {nsignals}')
+        return rows
+    if ':' in expr:
+        try:
+            sl = slice(*[int(x) if x else None for x in expr.split(':')])
+        except (ValueError, TypeError) as exc:
+            raise ValueError(f'invalid tgap row slice {rowspec[0]!r}') from exc
+        return list(range(nsignals)[sl])
+    try:
+        return [range(nsignals)[int(expr)]]
+    except (ValueError, IndexError) as exc:
+        raise ValueError(f'invalid tgap row {rowspec[0]!r}, 0 <= row < {nsignals}') from exc
+
+
 class TimingDiagram(Element):
     ''' Logic Timing Diagram
 
@@ -243,6 +310,7 @@ class TimingDiagram(Element):
 
         self._drawedges()
         self._drawshading(periods, len(signals_flat))
+        self._drawtgap(len(signals_flat))
         self._drawgroups(signals, labelwidth)
 
         if head:
@@ -463,7 +531,6 @@ class TimingDiagram(Element):
 
             # Draw tick gaps at the midpoint of each '|' interval
             for j in range(i+1, k):
-                print(f"{j=}, {times[j]} ")
                 xsplit = times[j] * period
                 self.segments.extend(getsplit(xsplit, y0, y1))
 
@@ -554,16 +621,19 @@ class TimingDiagram(Element):
                 for node in nodes:
                     nodewave, nodet = node.split(':')
                     nodet = float(nodet)  # number periods into wave
+                    nodewave = float(nodewave)
                     ofst = self.yheight/2
-                    if '^' in nodewave:
-                        ofst = self.yheight + caplen*2
-                    elif 'v' in nodewave:
-                        ofst = -caplen*2
-                    nodewave = nodewave.replace('^', '').replace('v', '')
-                    wavenum = int(nodewave)
+                    nodewave = float(nodewave)
+                    wave_n = int(nodewave)
+                    wave_f = nodewave - wave_n
+                    if 0 < wave_f < 0.5:
+                        ofst = self.yheight * (1.0 + wave_f)
+                    elif wave_f > 0.5:
+                        ofst = self.yheight * (0.5 - wave_f)
+
                     try:
-                        phase = signal[wavenum].get('phase', 0)
-                        nodealign = signal[wavenum].get('nodealign', self.nodealign)
+                        phase = signal[wave_n].get('phase', 0)
+                        nodealign = signal[wave_n].get('nodealign', self.nodealign)
                     except IndexError:
                         phase = 0
                         nodealign = self.nodealign
@@ -572,7 +642,7 @@ class TimingDiagram(Element):
                     if nodealign == 'signal':
                         nodex += self.risetime/2
                     endpoints.append(
-                        Point((nodex, -wavenum*(self.yheight + self.ygap) + ofst))
+                        Point((nodex, -wave_n*(self.yheight + self.ygap) + ofst))
                     )
                 p0, pn = endpoints
 
@@ -749,6 +819,30 @@ class TimingDiagram(Element):
                                     color='none', fill=color,
                                     zorder=0
                             ))
+
+    def _drawtgap(self, nsignals):
+        ''' Draw tick gaps spanning one or more signal rows at specified tick positions.
+            Each item in the tgap list is a string with the tick position,
+            optionally followed by the row or rows to span, see `tgap_rows`
+            for the row-spec formats.
+        '''
+        tgaps = self.wave.get('tgap', [])
+        period = 2*self.yheight*self.hscale
+        signal_height = self.yheight + self.ygap
+
+        for tgap in tgaps:
+            try:
+                parts = _split_tgap(tgap)
+                tick = float(parts[0])
+            except (ValueError, IndexError) as exc:
+                raise ValueError('tgap string must have a tick position, optionally followed by a row slice in brackets') from exc
+
+            rows = tgap_rows(parts[1:], nsignals)
+            x = tick*period
+            for r in rows:
+                ytop = self.yheight - r*signal_height
+                ybot = -r*signal_height
+                self.segments.extend(getsplit(x, ybot, ytop))
 
 
     @classmethod

@@ -13,6 +13,7 @@ v0.23 - 2026-05-29
         * Added differential clock `Q` waveform type
         * Added half-period bit `b` waveform type
         * Define shading of periods
+        * Define tick gaps spanning one or more signal rows with the `tgap` parameter, with row selection using Python list slice syntax, e.g. `[1:5]`, `[1:]`, `[1:-1]`, `[1, 8, 2]`
         * Allow signal with no wave, for drawing data text only
         * Improve alignment of edge text and arrows
 
