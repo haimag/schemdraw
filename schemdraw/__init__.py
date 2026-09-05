@@ -10,4 +10,4 @@ __all__ = [
     "SegmentPoly", "SegmentBezier", "Transform", "ImageFormat", "svgconfig"
 ]
 
-__version__ = '0.26'
+__version__ = '0.30'
